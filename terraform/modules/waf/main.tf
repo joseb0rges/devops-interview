@@ -299,9 +299,10 @@ resource "aws_wafv2_web_acl" "this" {
   tags = var.tags
 }
 
-# Associação automática (apenas REGIONAL)
+
 resource "aws_wafv2_web_acl_association" "assoc" {
-  for_each     = var.scope == "REGIONAL" ? toset(var.associate_resource_arns) : toset([])
+  # usando map(string); chaves estáticas garantem estabilidade no plan
+  for_each     = var.scope == "REGIONAL" ? var.associate_resource_arns : {}
   resource_arn = each.value
   web_acl_arn  = aws_wafv2_web_acl.this.arn
 }
