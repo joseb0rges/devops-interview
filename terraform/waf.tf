@@ -9,9 +9,9 @@ module "waf_min_alb" {
   name  = "alb-waf-min-dev"
   scope = "REGIONAL"
   # associa ao ALB (já extraído do listener)
-  associate_resource_arns = [
-    data.aws_lb_listener.ds_listener.load_balancer_arn
-  ]
+  associate_resource_arns = {
+     alb = data.aws_lb_listener.ds_listener.load_balancer_arn
+  }
   # >>> habilita as regras padrão (Managed Rule Groups)
   managed_rule_groups = module.waf_rules_default.waf_managed_default
   # Custom (as 5 regras pedidas)
