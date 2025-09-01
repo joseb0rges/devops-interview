@@ -29,9 +29,9 @@ variable "default_action" {
 }
 
 variable "associate_resource_arns" {
-  description = "Lista de ARNs REGIONAIS para associar (ALB/APIGW/AppSync). Ignorado em CLOUDFRONT."
-  type        = list(string)
-  default     = []
+  description = "Map of resource ARNs to associate (use static keys, e.g., alb)."
+  type        = map(string)
+  default     = {}
 }
 
 
