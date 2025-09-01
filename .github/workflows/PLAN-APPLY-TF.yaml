@@ -1,0 +1,93 @@
+name: 'PLAN and APPLY - DEV'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - terraform/**
+      - .github/workflows/**
+  workflow_dispatch: # permite rodar manualmente via UI do GitHub Actions
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  plan-dev-terraform:
+    runs-on: ubuntu-latest
+    name: PLAN - DEV
+    steps:
+
+      - name: "Configure AWS Providers"
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::573412182393:role/githubaction-testing
+          role-session-name: testing_devops
+          aws-region: us-east-1
+
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.7
+
+      - name: Terraform Init
+        id: init
+        working-directory: terraform/
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: terraform/
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: terraform/
+        run: terraform plan -lock=false -out=plan.dev.out
+
+      - name: Upload Plan File
+        id: artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: plan_dev
+          path: terraform//plan.dev.out
+          retention-days: 5
+
+  apply-dev-terraform:
+    runs-on: ubuntu-latest
+    name: APPLY - DEV
+    needs: plan-dev-terraform
+    if: ${{ github.event_name == 'workflow_dispatch' }} # só roda manualmente
+    steps:
+
+      - name: "Configure AWS Providers"
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::573412182393:role/githubaction-testing
+          role-session-name: testing_devops
+          aws-region: us-east-1
+
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.7
+
+      - name: Terraform Init
+        id: init
+        working-directory: terraform/
+        run: terraform init
+
+      - name: Download Plan File
+        uses: actions/download-artifact@v3
+        with:
+          path: terraform/
+          name: plan_dev
+    
+      - name: Terraform Apply
+        id: apply
+        working-directory: terraform/
+        run: terraform apply -auto-approve -lock=false plan.dev.out

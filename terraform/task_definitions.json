@@ -1,0 +1,33 @@
+[
+  {
+    "name": "api-webhook",
+    "image": "573412182393.dkr.ecr.us-east-1.amazonaws.com/api-webhook:latest",
+    "cpu": 0,
+    "memoryReservation": 128,
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": ${container_port},
+        "protocol": "tcp"
+      }
+    ],
+    "environment": [],
+    "mountPoints": [],
+    "volumesFrom": [],
+    "ulimits": [
+      {
+        "name": "nofile",
+        "softLimit": 100000,
+        "hardLimit": 1000000
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/task-api",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  }
+]
