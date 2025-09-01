@@ -1,42 +1,56 @@
-# Terraform Infrastructure – API com ALB + mTLS + ECS Fargate + WAF
+# 🌐 Terraform Infrastructure – API com ALB + mTLS + ECS Fargate + WAF
+
+![Terraform](https://img.shields.io/badge/Terraform-IAAC-blue?logo=terraform)
+![AWS](https://img.shields.io/badge/AWS-Fargate-orange?logo=amazonaws)
+![CI/CD](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-black?logo=github)
+
+---
 
 ## 📌 Visão Geral
 
-Este repositório contém a implementação de **infraestrutura em AWS via Terraform** para hospedar uma **API em ECS Fargate**, exposta através de um **Application Load Balancer (ALB)** com **SSL/TLS** e **mTLS** habilitados.
-O provisionamento é automatizado via **CI/CD no GitHub Actions**, garantindo segurança, consistência e reprodutibilidade.
+Este repositório contém a implementação de **infraestrutura AWS via Terraform** para hospedar uma **API em ECS Fargate**, protegida por um **Application Load Balancer (ALB)** com **SSL/TLS** e **mTLS** habilitados.
 
-### Componentes Provisionados
+O provisionamento é totalmente automatizado via **GitHub Actions**, garantindo segurança, consistência e reprodutibilidade.
 
-* **Networking**: VPC, subnets públicas e privadas, Internet Gateway e roteamento.
-* **S3 (mTLS Truststore)**: bucket versionado para armazenar o bundle de certificados da CA confiável (mTLS).
-* **ALB**: balanceador público com listener HTTPS, certificado TLS via ACM e **Trust Store** integrado ao S3.
-* **ECS Fargate**: cluster, task definitions e services para execução da aplicação containerizada.
-* **WAF v2**: Web Application Firewall integrado ao ALB para proteção contra tráfego malicioso.
+---
+
+## 🏗️ Componentes da Solução
+
+* **Networking** → VPC, subnets públicas/privadas, IGW e rotas.
+* **S3 (Truststore mTLS)** → bucket versionado para armazenar certificados de Autoridade (CA).
+* **ALB** → balanceador público HTTPS com trust store mTLS integrado ao S3.
+* **ECS Fargate** → cluster, tasks e services para rodar containers da API.
+* **WAF v2** → firewall integrado ao ALB, bloqueando tráfego malicioso.
 
 ---
 
 ## 🔐 Fluxo de Segurança
 
-1. O cliente acessa o **ALB** via HTTPS.
-2. O **ALB exige autenticação mTLS** (certificado cliente válido).
-3. O **bundle da CA** usado para validação do cliente é armazenado no **S3 versionado** e associado ao **Trust Store do ALB**.
-4. Conexões válidas são encaminhadas para o **ECS Fargate Service**.
-5. O **WAF v2** filtra tráfego malicioso antes que chegue à aplicação.
+```mermaid
+flowchart LR
+    Client([Cliente]) -- HTTPS + Cert Cliente --> ALB[(Application Load Balancer)]
+    ALB -- TrustStore S3 --> S3[(S3 CA Bundle)]
+    ALB --> WAF[WAF v2]
+    WAF --> ECS[(ECS Fargate Service)]
+    ECS --> App[Aplicação API]
+```
+
+1. O cliente se conecta ao **ALB via HTTPS**.
+2. O **ALB valida o certificado do cliente (mTLS)**.
+3. O **bundle da CA** está armazenado no **S3 versionado**.
+4. Conexões válidas passam pelo **WAF v2**.
+5. Somente então chegam ao **ECS Fargate Service**.
 
 ---
 
 ## 🛠️ Gerando Certificados com OpenSSL
 
-> ⚠️ Estes certificados são apenas para **homologação/testes**.
-> Em produção, recomenda-se usar **AWS ACM PCA** ou uma **CA corporativa**.
+⚠️ Para **homologação/testes**. Em produção, recomenda-se usar **AWS ACM PCA** ou CA corporativa.
 
 ### 1. Criar CA Root
 
 ```bash
-# Chave privada da CA
 openssl genrsa -out certs/ca.key 4096
-
-# Certificado da CA (válido por 10 anos)
 openssl req -x509 -new -nodes -key certs/ca.key -sha256 -days 3650 \
   -out certs/ca.crt -subj "/CN=MyRootCA/O=MyOrg/C=BR"
 ```
@@ -44,14 +58,9 @@ openssl req -x509 -new -nodes -key certs/ca.key -sha256 -days 3650 \
 ### 2. Criar Certificado do Cliente
 
 ```bash
-# Chave privada do cliente
 openssl genrsa -out certs/client.key 2048
-
-# CSR (certificate signing request)
 openssl req -new -key certs/client.key -out certs/client.csr \
   -subj "/CN=client1/O=MyOrg/C=BR"
-
-# Assina o CSR com a CA Root
 openssl x509 -req -in certs/client.csr -CA certs/ca.crt -CAkey certs/ca.key \
   -CAcreateserial -out certs/client.crt -days 365 -sha256
 ```
@@ -61,8 +70,6 @@ openssl x509 -req -in certs/client.csr -CA certs/ca.crt -CAkey certs/ca.key \
 ```bash
 cat certs/ca.crt > certs/ca_bundle.pem
 ```
-
-Este arquivo (`ca_bundle.pem`) é enviado ao **S3** e referenciado pelo **ALB Trust Store**.
 
 ### 4. Testar Conexão mTLS
 
@@ -74,36 +81,37 @@ curl -vk https://<ALB_DNS> \
 
 ---
 
-## ⚙️ CI/CD (GitHub Actions)
+## ⚙️ CI/CD – GitHub Actions
 
-A pipeline de provisionamento está definida em `.github/workflows/terraform.yml` e possui dois jobs principais:
+A pipeline em `.github/workflows/terraform.yml` controla todo o ciclo:
 
-### **PLAN - DEV**
+### 🔍 PLAN - DEV
 
-Executado automaticamente a cada **push para `main`**:
+Executado em **push para `main`**:
 
 * `terraform init`
 * `terraform validate`
-* `terraform plan`
-  O plano (`plan.dev.out`) é salvo como artefato.
+* `terraform plan` → gera `plan.dev.out` (salvo como artefato).
 
-### **APPLY - DEV**
+### 🚀 APPLY - DEV
 
-Executado **apenas manualmente** via `workflow_dispatch`:
+Executado **apenas manualmente** (`workflow_dispatch`):
 
-* Baixa o artefato `plan.dev.out`
-* Executa `terraform apply -auto-approve`
+* Baixa `plan.dev.out`.
+* Executa `terraform apply -auto-approve`.
 
-🔒 Isso garante que **nenhuma mudança seja aplicada sem aprovação explícita**.
+🔒 **Segurança extra**: nada é aplicado automaticamente em produção.
 
 ---
 
-## 🚀 Benefícios da Implementação
+## ✅ Benefícios
 
-✅ **Automação completa** – provisionamento 100% versionado e reprodutível com Terraform.
-✅ **Segurança reforçada** – mTLS no ALB + proteção adicional com WAF.
-✅ **Escalabilidade** – workloads serverless no ECS Fargate.
-✅ **Governança** – certificados versionados em S3.
-✅ **Confiabilidade** – mudanças aplicadas apenas via CI/CD controlado.
+* **Automação completa** com Terraform + GitHub Actions.
+* **Segurança reforçada**: mTLS no ALB + WAF integrado.
+* **Escalabilidade** com ECS Fargate (serverless containers).
+* **Governança**: certificados versionados em S3.
+* **Confiabilidade**: plano/aplicação controlados por CI/CD.
+
+---
 
 
