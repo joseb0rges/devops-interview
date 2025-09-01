@@ -21,4 +21,5 @@ module "waf_min_alb" {
   rate_limit          = module.waf_rules_default.waf_rate_limit_value
   rate_limit_priority = module.waf_rules_default.waf_rate_limit_priority
   tags = { Env = "dev" }
+  depends_on = [module.alb]
 }
