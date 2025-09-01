@@ -1,6 +1,13 @@
 module "ecs_cluster" {   
     source         = "./modules/ecs/cluster"
     project_name = "devops-interview"
+    depends_on = [
+        module.networking,
+        module.s3_mtls,
+        module.alb,
+        module.waf_min_alb,
+        module.waf_rules_default
+   ]
 }
 module "ecs_cluster_service" {   
     source         = "./modules/ecs/service"
@@ -18,4 +25,11 @@ module "ecs_cluster_service" {
     log_group_path = "/ecs/task-api"
     alb_sg_id = module.alb.alb_sg_id
     target_group_arn = module.alb.target_group_arn
+    depends_on = [
+        module.networking,
+        module.s3_mtls,
+        module.alb,
+        module.waf_min_alb,
+        module.waf_rules_default
+   ]
 }
