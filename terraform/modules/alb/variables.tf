@@ -57,4 +57,10 @@ variable "advertise_ca_names" {
 # Trust store (do módulo s3_mtls)
 variable "truststore_s3_bucket"         { type = string }
 variable "truststore_s3_key"            { type = string }
-variable "truststore_s3_object_version" { type = string }
+variable "truststore_s3_object_version" {
+  type = string
+  validation {
+    condition     = length(var.truststore_s3_object_version) > 0
+    error_message = "truststore_s3_object_version não pode ser vazio quando o bucket tem versionamento."
+  }
+}

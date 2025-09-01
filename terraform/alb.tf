@@ -23,8 +23,6 @@ module "alb" {
   truststore_s3_bucket      = module.s3_mtls.bucket
   truststore_s3_key         = module.s3_mtls.object_key
   truststore_s3_object_version = module.s3_mtls.object_version
-   depends_on = [
-    module.networking,
-    module.s3_mtls
-   ]
+   
+  depends_on = [module.s3_mtls]
 }
