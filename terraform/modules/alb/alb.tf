@@ -77,7 +77,8 @@ resource "aws_lb_trust_store" "mtls" {
 
   ca_certificates_bundle_s3_bucket         = var.truststore_s3_bucket
   ca_certificates_bundle_s3_key            = var.truststore_s3_key
-  ca_certificates_bundle_s3_object_version = var.truststore_s3_object_version
+  ca_certificates_bundle_s3_object_version = var.truststore_s3_object_version != "" ? var.truststore_s3_object_version : null
+
 }
 
 locals {

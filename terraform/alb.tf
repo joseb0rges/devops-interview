@@ -22,7 +22,7 @@ module "alb" {
   advertise_ca_names        = true
   truststore_s3_bucket      = module.s3_mtls.bucket
   truststore_s3_key         = module.s3_mtls.object_key
-  truststore_s3_object_version = module.s3_mtls.object_version
+  truststore_s3_object_version = null
    
   depends_on = [module.s3_mtls]
 }
