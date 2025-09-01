@@ -53,14 +53,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: plan_dev
-          path: terraform//plan.dev.out
+          path: terraform/plan.dev.out
           retention-days: 5
 
   apply-dev-terraform:
     runs-on: ubuntu-latest
     name: APPLY - DEV
     needs: plan-dev-terraform
-    if: ${{ github.event_name == 'workflow_dispatch' }} # só roda manualmente
+    if: ${{ github.event_name == 'workflow_dispatch' && needs.plan-dev-terraform.result == 'success' }}
     steps:
 
       - name: "Configure AWS Providers"
